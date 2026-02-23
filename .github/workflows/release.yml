@@ -106,7 +106,7 @@ jobs:
         run: |
           for dir in npm/@loukotal/devmoji-rs-*/; do
             echo "Publishing @loukotal/$(basename "$dir")..."
-            (cd "$dir" && npm publish --access public)
+            (cd "$dir" && npm publish --access public) || echo "Skipped (already published?)"
           done
 
       - name: Publish root package
