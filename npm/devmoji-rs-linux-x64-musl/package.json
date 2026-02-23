@@ -1,0 +1,16 @@
+{
+  "name": "devmoji-rs-linux-x64-musl",
+  "version": "0.1.0",
+  "description": "devmoji-rs binary for Linux x64 (musl/Alpine)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lukasloukota/devmoji-rs"
+  },
+  "os": ["linux"],
+  "cpu": ["x64"],
+  "libc": ["musl"],
+  "files": [
+    "bin/"
+  ]
+}
