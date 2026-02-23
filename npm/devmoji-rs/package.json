@@ -1,6 +1,6 @@
 {
   "name": "devmoji-rs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI tool to add emoji to conventional commits",
   "license": "MIT",
   "repository": {
@@ -14,11 +14,11 @@
     "bin/"
   ],
   "optionalDependencies": {
-    "devmoji-rs-darwin-arm64": "0.1.0",
-    "devmoji-rs-darwin-x64": "0.1.0",
-    "devmoji-rs-linux-x64-gnu": "0.1.0",
-    "devmoji-rs-linux-x64-musl": "0.1.0",
-    "devmoji-rs-linux-arm64-gnu": "0.1.0",
-    "devmoji-rs-win32-x64": "0.1.0"
+    "devmoji-rs-darwin-arm64": "0.1.1",
+    "devmoji-rs-darwin-x64": "0.1.1",
+    "devmoji-rs-linux-x64-gnu": "0.1.1",
+    "devmoji-rs-linux-x64-musl": "0.1.1",
+    "devmoji-rs-linux-arm64-gnu": "0.1.1",
+    "devmoji-rs-win32-x64": "0.1.1"
   }
 }
