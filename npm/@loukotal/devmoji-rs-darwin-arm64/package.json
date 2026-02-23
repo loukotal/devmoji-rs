@@ -1,6 +1,6 @@
 {
   "name": "@loukotal/devmoji-rs-darwin-arm64",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "devmoji-rs binary for macOS ARM64 (Apple Silicon)",
   "license": "MIT",
   "repository": {

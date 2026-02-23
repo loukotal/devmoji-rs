@@ -69,6 +69,7 @@ jobs:
         run: |
           mkdir -p "npm/@loukotal/${{ matrix.npm-pkg }}/bin"
           cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" "npm/@loukotal/${{ matrix.npm-pkg }}/bin/"
+          chmod +x "npm/@loukotal/${{ matrix.npm-pkg }}/bin/${{ matrix.binary }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

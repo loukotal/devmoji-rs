@@ -46,9 +46,9 @@ struct Cli {
     #[arg(long)]
     no_commit: bool,
 
-    /// Read last commit message from .git/COMMIT_EDITMSG
+    /// Read and edit a commit message file [default: .git/COMMIT_EDITMSG]
     #[arg(short, long)]
-    edit: bool,
+    edit: Option<Option<String>>,
 
     /// Format conventional commits similar to git log
     #[arg(long)]
@@ -90,8 +90,8 @@ fn main() {
     }
 
     // --edit mode
-    if cli.edit {
-        handle_edit(&dm, &cc, commit_enabled, &cli.format);
+    if let Some(edit_file) = cli.edit {
+        handle_edit(&dm, &cc, commit_enabled, &cli.format, edit_file);
         return;
     }
 
@@ -221,58 +221,60 @@ fn print_list(dm: &Devmoji, cfg: &Config) {
     }
 }
 
-fn handle_edit(dm: &Devmoji, cc: &ConventionalCommits, commit: bool, format: &str) {
-    let git_dir = find_git_dir();
-    match git_dir {
-        Some(dir) => {
-            let msg_file = dir.join("COMMIT_EDITMSG");
-            if !msg_file.exists() {
-                eprintln!("Could not find {}", msg_file.display());
+fn handle_edit(dm: &Devmoji, cc: &ConventionalCommits, commit: bool, format: &str, file: Option<String>) {
+    let msg_file = if let Some(path) = file {
+        PathBuf::from(path)
+    } else {
+        match find_git_dir() {
+            Some(dir) => dir.join("COMMIT_EDITMSG"),
+            None => {
+                eprintln!("Could not find .git directory");
                 process::exit(1);
             }
-
-            let text = match std::fs::read_to_string(&msg_file) {
-                Ok(t) => t,
-                Err(e) => {
-                    eprintln!("Error reading {}: {}", msg_file.display(), e);
-                    process::exit(1);
-                }
-            };
-
-            // Format without color for file
-            let formatted = if commit {
-                cc.format_commit(&text, false)
-            } else {
-                match format {
-                    "shortcode" => dm.demojify(&text),
-                    "devmoji" => dm.devmojify(&text),
-                    "strip" => dm.strip(&text),
-                    _ => dm.emojify(&text),
-                }
-            };
-
-            // Write back
-            if let Err(e) = std::fs::write(&msg_file, &formatted) {
-                eprintln!("Error writing {}: {}", msg_file.display(), e);
-                process::exit(1);
-            }
-
-            // Format with color for display
-            let display = if commit {
-                cc.format_commit(&text, true)
-            } else {
-                formatted.clone()
-            };
-
-            // Print with checkmark
-            let first_line = display.lines().next().unwrap_or(&display);
-            println!("{} {}", "\u{2714}".green(), first_line);
         }
-        None => {
-            eprintln!("Could not find .git directory");
+    };
+
+    if !msg_file.exists() {
+        eprintln!("Could not find {}", msg_file.display());
+        process::exit(1);
+    }
+
+    let text = match std::fs::read_to_string(&msg_file) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Error reading {}: {}", msg_file.display(), e);
             process::exit(1);
         }
+    };
+
+    // Format without color for file
+    let formatted = if commit {
+        cc.format_commit(&text, false)
+    } else {
+        match format {
+            "shortcode" => dm.demojify(&text),
+            "devmoji" => dm.devmojify(&text),
+            "strip" => dm.strip(&text),
+            _ => dm.emojify(&text),
+        }
+    };
+
+    // Write back
+    if let Err(e) = std::fs::write(&msg_file, &formatted) {
+        eprintln!("Error writing {}: {}", msg_file.display(), e);
+        process::exit(1);
     }
+
+    // Format with color for display
+    let display = if commit {
+        cc.format_commit(&text, true)
+    } else {
+        formatted.clone()
+    };
+
+    // Print with checkmark
+    let first_line = display.lines().next().unwrap_or(&display);
+    println!("{} {}", "\u{2714}".green(), first_line);
 }
 
 fn find_git_dir() -> Option<PathBuf> {

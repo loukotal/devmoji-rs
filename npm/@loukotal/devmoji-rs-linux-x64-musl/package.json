@@ -1,6 +1,6 @@
 {
   "name": "@loukotal/devmoji-rs-linux-x64-musl",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "devmoji-rs binary for Linux x64 (musl/Alpine)",
   "license": "MIT",
   "repository": {
