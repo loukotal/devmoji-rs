@@ -1,6 +1,6 @@
 {
   "name": "@loukotal/devmoji-rs-linux-arm64-gnu",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "devmoji-rs binary for Linux ARM64 (glibc)",
   "license": "MIT",
   "repository": {

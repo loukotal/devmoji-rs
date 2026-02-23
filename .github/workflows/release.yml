@@ -99,6 +99,8 @@ jobs:
           for dir in npm-artifacts/devmoji-rs-*/; do
             pkg_name=$(basename "$dir")
             cp -r "$dir"/* "npm/@loukotal/$pkg_name/"
+            chmod +x "npm/@loukotal/$pkg_name/bin/devmoji" 2>/dev/null || true
+            chmod +x "npm/@loukotal/$pkg_name/bin/devmoji.exe" 2>/dev/null || true
           done
 
       - name: Publish platform packages
