@@ -1,6 +1,6 @@
 {
   "name": "@loukotal/devmoji-rs-darwin-x64",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "devmoji-rs binary for macOS x64 (Intel)",
   "license": "MIT",
   "repository": {
