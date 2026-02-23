@@ -1,5 +1,5 @@
 {
-  "name": "devmoji-rs",
+  "name": "@loukotal/devmoji-rs",
   "version": "0.1.2",
   "description": "CLI tool to add emoji to conventional commits",
   "license": "MIT",
