@@ -21,11 +21,11 @@ sed -i.bak "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" "$ROOT/npm/devmoji
 rm -f "$ROOT/npm/devmoji-rs/package.json.bak"
 
 # Update optionalDependencies versions in root package
-sed -i.bak "s/\"devmoji-rs-\([^\"]*\)\": \"[^\"]*\"/\"devmoji-rs-\1\": \"$VERSION\"/" "$ROOT/npm/devmoji-rs/package.json"
+sed -i.bak "s/\"@loukotal\/\([^\"]*\)\": \"[^\"]*\"/\"@loukotal\/\1\": \"$VERSION\"/" "$ROOT/npm/devmoji-rs/package.json"
 rm -f "$ROOT/npm/devmoji-rs/package.json.bak"
 
 # Update all platform package versions
-for pkg in "$ROOT"/npm/devmoji-rs-*/package.json; do
+for pkg in "$ROOT"/npm/@loukotal/*/package.json; do
   sed -i.bak "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" "$pkg"
   rm -f "$pkg.bak"
 done
@@ -33,7 +33,7 @@ done
 echo "Updated to version $VERSION:"
 echo "  - Cargo.toml"
 echo "  - npm/devmoji-rs/package.json"
-for pkg in "$ROOT"/npm/devmoji-rs-*/package.json; do
+for pkg in "$ROOT"/npm/@loukotal/*/package.json; do
   echo "  - ${pkg#$ROOT/}"
 done
 

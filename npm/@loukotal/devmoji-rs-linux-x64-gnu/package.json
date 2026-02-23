@@ -1,11 +1,11 @@
 {
-  "name": "devmoji-rs-linux-x64-gnu",
-  "version": "0.1.1",
+  "name": "@loukotal/devmoji-rs-linux-x64-gnu",
+  "version": "0.1.2",
   "description": "devmoji-rs binary for Linux x64 (glibc)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lukasloukota/devmoji-rs"
+    "url": "https://github.com/loukotal/devmoji-rs"
   },
   "os": ["linux"],
   "cpu": ["x64"],

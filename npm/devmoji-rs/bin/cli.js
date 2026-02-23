@@ -4,12 +4,12 @@ const { execFileSync } = require("child_process");
 const path = require("path");
 
 const PLATFORMS = {
-  "darwin-arm64": "devmoji-rs-darwin-arm64",
-  "darwin-x64": "devmoji-rs-darwin-x64",
-  "linux-x64-gnu": "devmoji-rs-linux-x64-gnu",
-  "linux-x64-musl": "devmoji-rs-linux-x64-musl",
-  "linux-arm64-gnu": "devmoji-rs-linux-arm64-gnu",
-  "win32-x64": "devmoji-rs-win32-x64",
+  "darwin-arm64": "@loukotal/devmoji-rs-darwin-arm64",
+  "darwin-x64": "@loukotal/devmoji-rs-darwin-x64",
+  "linux-x64-gnu": "@loukotal/devmoji-rs-linux-x64-gnu",
+  "linux-x64-musl": "@loukotal/devmoji-rs-linux-x64-musl",
+  "linux-arm64-gnu": "@loukotal/devmoji-rs-linux-arm64-gnu",
+  "win32-x64": "@loukotal/devmoji-rs-win32-x64",
 };
 
 function getBinaryPath() {
@@ -17,9 +17,7 @@ function getBinaryPath() {
   const arch = process.arch;
   const binaryName = platform === "win32" ? "devmoji.exe" : "devmoji";
 
-  // Try platform-specific package first
   if (platform === "linux") {
-    // Try musl first for Alpine/musl-based systems, fall back to gnu
     const candidates = [`${platform}-${arch}-musl`, `${platform}-${arch}-gnu`];
     for (const candidate of candidates) {
       const pkg = PLATFORMS[candidate];

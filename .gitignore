@@ -1,5 +1,5 @@
 /target
 
 # npm platform binaries (populated by CI)
-npm/devmoji-rs-*/bin/devmoji
-npm/devmoji-rs-*/bin/devmoji.exe
+npm/@loukotal/*/bin/devmoji
+npm/@loukotal/*/bin/devmoji.exe

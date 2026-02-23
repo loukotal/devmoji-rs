@@ -1,11 +1,11 @@
 {
-  "name": "devmoji-rs-darwin-arm64",
-  "version": "0.1.1",
+  "name": "@loukotal/devmoji-rs-darwin-arm64",
+  "version": "0.1.2",
   "description": "devmoji-rs binary for macOS ARM64 (Apple Silicon)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lukasloukota/devmoji-rs"
+    "url": "https://github.com/loukotal/devmoji-rs"
   },
   "os": ["darwin"],
   "cpu": ["arm64"],

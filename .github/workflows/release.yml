@@ -67,14 +67,14 @@ jobs:
       - name: Copy binary to npm package
         shell: bash
         run: |
-          mkdir -p "npm/${{ matrix.npm-pkg }}/bin"
-          cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" "npm/${{ matrix.npm-pkg }}/bin/"
+          mkdir -p "npm/@loukotal/${{ matrix.npm-pkg }}/bin"
+          cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" "npm/@loukotal/${{ matrix.npm-pkg }}/bin/"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.npm-pkg }}
-          path: npm/${{ matrix.npm-pkg }}/
+          path: npm/@loukotal/${{ matrix.npm-pkg }}/
 
   publish:
     needs: build
@@ -97,15 +97,15 @@ jobs:
         run: |
           for dir in npm-artifacts/devmoji-rs-*/; do
             pkg_name=$(basename "$dir")
-            cp -r "$dir"/* "npm/$pkg_name/"
+            cp -r "$dir"/* "npm/@loukotal/$pkg_name/"
           done
 
       - name: Publish platform packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          for dir in npm/devmoji-rs-*/; do
-            echo "Publishing $(basename "$dir")..."
+          for dir in npm/@loukotal/devmoji-rs-*/; do
+            echo "Publishing @loukotal/$(basename "$dir")..."
             (cd "$dir" && npm publish --access public)
           done
 
