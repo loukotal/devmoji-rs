@@ -5,7 +5,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/loukotal/devmoji-rs"
+    "url": "git+https://github.com/loukotal/devmoji-rs.git"
   },
   "bin": {
     "devmoji-rs": "bin/cli.js"
