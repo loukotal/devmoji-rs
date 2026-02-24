@@ -3,3 +3,4 @@
 # npm platform binaries (populated by CI)
 npm/@loukotal/*/bin/devmoji
 npm/@loukotal/*/bin/devmoji.exe
+node_modules
