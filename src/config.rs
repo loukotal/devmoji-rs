@@ -1,7 +1,10 @@
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use once_cell::sync::Lazy;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct DevmojiEntry {
@@ -10,7 +13,7 @@ pub struct DevmojiEntry {
     pub description: String,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
 pub struct ConfigFile {
     #[serde(default)]
     pub types: Vec<String>,
@@ -18,13 +21,16 @@ pub struct ConfigFile {
     pub devmoji: Vec<ConfigDevmojiEntry>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ConfigDevmojiEntry {
     pub code: String,
     pub emoji: Option<String>,
     pub gitmoji: Option<String>,
     pub description: Option<String>,
 }
+
+/// All supported config file extensions, in priority order.
+const CONFIG_EXTENSIONS: &[&str] = &["json", "ts", "mts", "js", "mjs"];
 
 pub static DEFAULT_TYPES: Lazy<Vec<&'static str>> = Lazy::new(|| {
     vec![
@@ -133,29 +139,30 @@ fn resolve_config_description(entry: &ConfigDevmojiEntry) -> Option<String> {
     None
 }
 
+/// Check if any config file exists in a directory (across all supported extensions).
+fn find_config_in_dir(dir: &Path) -> Option<PathBuf> {
+    for ext in CONFIG_EXTENSIONS {
+        let candidate = dir.join(format!("devmoji.config.{}", ext));
+        if candidate.exists() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
 fn find_config_file() -> Option<PathBuf> {
     let cwd = std::env::current_dir().ok()?;
 
     // Check current directory
-    let candidate = cwd.join("devmoji.config.json");
-    if candidate.exists() {
-        return Some(candidate);
+    if let Some(found) = find_config_in_dir(&cwd) {
+        return Some(found);
     }
 
-    // Walk up looking for package.json or .git
+    // Walk up looking for config files
     let mut dir = cwd.as_path();
     loop {
-        let candidate = dir.join("devmoji.config.json");
-        if candidate.exists() {
-            return Some(candidate);
-        }
-
-        // Check if this dir has package.json or .git
-        if dir.join("package.json").exists() || dir.join(".git").exists() {
-            let candidate = dir.join("devmoji.config.json");
-            if candidate.exists() {
-                return Some(candidate);
-            }
+        if let Some(found) = find_config_in_dir(dir) {
+            return Some(found);
         }
 
         match dir.parent() {
@@ -166,9 +173,8 @@ fn find_config_file() -> Option<PathBuf> {
 
     // Check home directory
     if let Some(home) = dirs_home() {
-        let candidate = home.join("devmoji.config.json");
-        if candidate.exists() {
-            return Some(candidate);
+        if let Some(found) = find_config_in_dir(&home) {
+            return Some(found);
         }
     }
 
@@ -182,6 +188,214 @@ fn dirs_home() -> Option<PathBuf> {
 }
 
 fn load_config_file(path: &Path) -> Option<ConfigFile> {
+    let ext = path.extension()?.to_str()?;
+    match ext {
+        "json" => load_json_config(path),
+        "js" | "mjs" | "ts" | "mts" => load_js_config(path),
+        _ => None,
+    }
+}
+
+fn load_json_config(path: &Path) -> Option<ConfigFile> {
     let contents = std::fs::read_to_string(path).ok()?;
     serde_json::from_str(&contents).ok()
+}
+
+/// Cached config entry stored in `node_modules/.cache/devmoji/config.json`.
+#[derive(Debug, Serialize, Deserialize)]
+struct CachedConfig {
+    /// Hash of the source config file contents.
+    source_hash: u64,
+    /// The resolved config.
+    config: ConfigFile,
+}
+
+/// Compute a hash of the given bytes using the standard library hasher.
+fn hash_bytes(bytes: &[u8]) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    bytes.hash(&mut hasher);
+    hasher.finish()
+}
+
+/// Find the `node_modules/.cache/devmoji/` directory relative to the config file.
+/// Walks up from the config file's parent looking for `node_modules/`.
+fn find_cache_dir(config_path: &Path) -> Option<PathBuf> {
+    let start = config_path.parent()?;
+    let mut dir = start;
+    loop {
+        let nm = dir.join("node_modules");
+        if nm.is_dir() {
+            return Some(nm.join(".cache").join("devmoji"));
+        }
+        match dir.parent() {
+            Some(parent) => dir = parent,
+            None => return None,
+        }
+    }
+}
+
+/// Try to read a cached config. Returns `Some` if the cache exists and the
+/// source hash matches.
+fn read_cached_config(cache_dir: &Path, source_hash: u64) -> Option<ConfigFile> {
+    let cache_file = cache_dir.join("config.json");
+    let contents = std::fs::read_to_string(&cache_file).ok()?;
+    let cached: CachedConfig = serde_json::from_str(&contents).ok()?;
+    if cached.source_hash == source_hash {
+        Some(cached.config)
+    } else {
+        None
+    }
+}
+
+/// Write a resolved config to the cache.
+fn write_cached_config(cache_dir: &Path, source_hash: u64, config: &ConfigFile) {
+    let cached = CachedConfig {
+        source_hash,
+        config: config.clone(),
+    };
+    if let Ok(json) = serde_json::to_string(&cached) {
+        let _ = std::fs::create_dir_all(cache_dir);
+        let _ = std::fs::write(cache_dir.join("config.json"), json);
+    }
+}
+
+/// Load a JS/TS config file by evaluating it with Node.js.
+///
+/// Uses a file-content hash cache in `node_modules/.cache/devmoji/` so that
+/// Node.js is only spawned when the config file actually changes.
+///
+/// The config file is expected to have a default export with the config object.
+fn load_js_config(path: &Path) -> Option<ConfigFile> {
+    let abs_path = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir().ok()?.join(path)
+    };
+
+    // Read source file and compute hash
+    let source_bytes = std::fs::read(&abs_path).ok()?;
+    let source_hash = hash_bytes(&source_bytes);
+
+    // Check cache
+    let cache_dir = find_cache_dir(&abs_path);
+    if let Some(ref dir) = cache_dir {
+        if let Some(cached) = read_cached_config(dir, source_hash) {
+            return Some(cached);
+        }
+    }
+
+    // Cache miss — evaluate via Node.js
+    let path_str = abs_path.to_str()?;
+    let ext = abs_path.extension()?.to_str()?;
+    let is_ts = matches!(ext, "ts" | "mts");
+
+    let loader_script = format!(
+        r#"import('{url}').then(m => {{const c = m.default ?? m; process.stdout.write(JSON.stringify(c));}}).catch(e => {{process.stderr.write(e.message); process.exit(1);}})"#,
+        url = path_to_file_url(path_str),
+    );
+
+    let json_output = if is_ts {
+        try_run_node_with_tsx(&loader_script)
+            .or_else(|| try_run_node_strip_types(&loader_script))
+    } else {
+        try_run_node(&loader_script)
+    };
+
+    let output = json_output.or_else(|| {
+        eprintln!(
+            "devmoji: failed to load config file '{}'. {}",
+            path.display(),
+            if is_ts {
+                "Ensure 'tsx' is installed (npm i -D tsx) or use Node.js >= 22.6 for TypeScript support."
+            } else {
+                "Ensure Node.js is available on your PATH."
+            }
+        );
+        None
+    })?;
+
+    let config: ConfigFile = serde_json::from_str(&output).ok()?;
+
+    // Write to cache for next time
+    if let Some(ref dir) = cache_dir {
+        write_cached_config(dir, source_hash, &config);
+    }
+
+    Some(config)
+}
+
+/// Run a script with `node --input-type=module`
+fn try_run_node(script: &str) -> Option<String> {
+    let output = Command::new("node")
+        .args(["--input-type=module", "-e", script])
+        .output()
+        .ok()?;
+
+    if output.status.success() {
+        Some(String::from_utf8_lossy(&output.stdout).into_owned())
+    } else {
+        None
+    }
+}
+
+/// Run a script with `tsx` (npx tsx or direct tsx)
+fn try_run_node_with_tsx(script: &str) -> Option<String> {
+    // Try direct tsx first (globally installed or in node_modules/.bin)
+    let output = Command::new("tsx")
+        .args(["--eval", script])
+        .arg("--input-type=module")
+        .output();
+
+    if let Ok(output) = output {
+        if output.status.success() {
+            return Some(String::from_utf8_lossy(&output.stdout).into_owned());
+        }
+    }
+
+    // Try via node --import tsx
+    let output = Command::new("node")
+        .args(["--import", "tsx", "--input-type=module", "-e", script])
+        .output()
+        .ok()?;
+
+    if output.status.success() {
+        Some(String::from_utf8_lossy(&output.stdout).into_owned())
+    } else {
+        None
+    }
+}
+
+/// Run a script with Node.js --experimental-strip-types (Node 22.6+)
+fn try_run_node_strip_types(script: &str) -> Option<String> {
+    let output = Command::new("node")
+        .args([
+            "--experimental-strip-types",
+            "--disable-warning=ExperimentalWarning",
+            "--input-type=module",
+            "-e",
+            script,
+        ])
+        .output()
+        .ok()?;
+
+    if output.status.success() {
+        Some(String::from_utf8_lossy(&output.stdout).into_owned())
+    } else {
+        None
+    }
+}
+
+/// Convert a file path to a file:// URL for use with dynamic import().
+fn path_to_file_url(path: &str) -> String {
+    // On Windows, paths need to be converted (C:\foo -> file:///C:/foo)
+    if cfg!(windows) {
+        let normalized = path.replace('\\', "/");
+        if normalized.starts_with('/') {
+            format!("file://{}", normalized)
+        } else {
+            format!("file:///{}", normalized)
+        }
+    } else {
+        format!("file://{}", path)
+    }
 }
