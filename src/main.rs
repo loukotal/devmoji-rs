@@ -18,7 +18,7 @@ use devmoji::Devmoji;
 #[derive(Parser)]
 #[command(name = "devmoji", version, about = "Emojify conventional commits")]
 struct Cli {
-    /// Location of the devmoji.config.json file
+    /// Location of the devmoji config file (supports .json, .js, .mjs, .ts, .mts)
     #[arg(short, long, value_name = "FILE")]
     config: Option<String>,
 

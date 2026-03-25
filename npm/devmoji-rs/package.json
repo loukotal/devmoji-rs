@@ -3,6 +3,7 @@
   "version": "0.1.7",
   "description": "CLI tool to add emoji to conventional commits",
   "license": "MIT",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/loukotal/devmoji-rs.git"
@@ -10,8 +11,18 @@
   "bin": {
     "devmoji-rs": "bin/cli.js"
   },
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js"
+    }
+  },
   "files": [
     "bin/",
+    "index.js",
+    "index.d.ts",
     "README.md"
   ],
   "optionalDependencies": {

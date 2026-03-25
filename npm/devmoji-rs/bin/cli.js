@@ -1,7 +1,13 @@
 #!/usr/bin/env node
 
-const { execFileSync } = require("child_process");
-const path = require("path");
+import { execFileSync } from "node:child_process";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const PLATFORMS = {
   "darwin-arm64": "@loukotal/devmoji-rs-darwin-arm64",
@@ -17,14 +23,15 @@ function getBinaryPath() {
   const arch = process.arch;
   const binaryName = platform === "win32" ? "devmoji.exe" : "devmoji";
 
+  // Try platform-specific package first (normal npm install)
   if (platform === "linux") {
     const candidates = [`${platform}-${arch}-musl`, `${platform}-${arch}-gnu`];
     for (const candidate of candidates) {
       const pkg = PLATFORMS[candidate];
       if (pkg) {
         try {
-          return path.join(
-            path.dirname(require.resolve(`${pkg}/package.json`)),
+          return join(
+            dirname(require.resolve(`${pkg}/package.json`)),
             "bin",
             binaryName
           );
@@ -36,13 +43,19 @@ function getBinaryPath() {
     const pkg = PLATFORMS[key];
     if (pkg) {
       try {
-        return path.join(
-          path.dirname(require.resolve(`${pkg}/package.json`)),
+        return join(
+          dirname(require.resolve(`${pkg}/package.json`)),
           "bin",
           binaryName
         );
       } catch {}
     }
+  }
+
+  // Fallback: binary in the same bin/ directory (local dev / pnpm link)
+  const localBinary = join(__dirname, binaryName);
+  if (existsSync(localBinary)) {
+    return localBinary;
   }
 
   throw new Error(
